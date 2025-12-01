@@ -24,4 +24,5 @@ You can play with a few examples that illustrate how the library can be used:
 ```
 cabal run gloss-relative-checkers
 cabal run gloss-relative-button
+cabal run gloss-relative-drag
 ```

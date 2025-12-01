@@ -10,7 +10,7 @@ initial :: State
 initial = State False False
 
 draw :: State -> Frame
-draw st = Zoom 0.5 0.5 alignCenter $ bordered 10 borderc $ Label "button" $ Frames [solid c,labels]
+draw st = Zoom 0.5 0.5 alignCenter $ bordered 10 borderc $ Label "button" False $ Frames [solid c,labels]
     where
     borderc = if pressed st then red else c
     c = if selected st then grey else black

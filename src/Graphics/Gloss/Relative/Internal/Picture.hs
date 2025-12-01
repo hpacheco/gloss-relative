@@ -14,6 +14,20 @@ translateX x p = Translate x 0 p
 translateY :: Float -> Picture -> Picture
 translateY y p = Translate 0 y p
 
+-- The default Monoid instance for 'Picture' is buggy, since Blank is not in fact a neutral element.
+emptyPicture :: Picture
+emptyPicture = Pictures []
+
+joinPicture :: Picture -> Picture -> Picture
+joinPicture (Pictures xs) (Pictures ys) = catPictures $ xs ++ ys
+joinPicture x (Pictures ys) = catPictures (x : ys)
+joinPicture (Pictures xs) y = catPictures (xs ++ [y])
+joinPicture x y = catPictures [x,y]
+
+catPictures :: [Picture] -> Picture
+catPictures [x] = x
+catPictures xs = Pictures xs
+
 -- * Regions
 
 -- | A rectangular region within the screen.
@@ -43,11 +57,22 @@ dimensionToRegion (w,h) = Region { regionLeftTop = (-w/2,h/2), regionDimension =
 
 pointInsideRegion :: Point -> Region -> Bool
 pointInsideRegion (mouseX,mouseY) r =
-    let (regionLeft,regionTop) = regionLeftTop r in
-    let (w,h) = regionDimension r in
-    let regionRight = regionLeft + w in
-    let regionBottom = regionTop - h in
-    (regionLeft <= mouseX && mouseX <= regionRight) && (regionBottom <= mouseY && mouseY <= regionTop)
+    let (regionLeft,regionTop) = regionLeftTop r
+        (w,h) = regionDimension r 
+        regionRight = regionLeft + w 
+        regionBottom = regionTop - h 
+    in (regionLeft <= mouseX && mouseX <= regionRight) && (regionBottom <= mouseY && mouseY <= regionTop)
+
+-- converts a point inside a region to a relative point within the region
+pointWithinRegion :: Point -> Region -> Maybe Point
+pointWithinRegion p@(x,y) r = if pointInsideRegion p r
+    then
+        let (regionLeft,regionTop) = regionLeftTop r 
+            (w,h) = regionDimension r
+            regionCenterX = regionLeft + w / 2
+            regionCenterY = regionTop - h / 2
+        in Just (x - regionCenterX,y - regionCenterY)
+    else Nothing
 
 translateRegionX :: Float -> Region -> Region
 translateRegionX f r = r { regionLeftTop = translatePointX f (regionLeftTop r) }
