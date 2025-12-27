@@ -62,7 +62,7 @@ displayRelative
 displayRelative dis backColor frame = do
     screen <- getDisplayDimension dis
     let pic = renderStaticFrame frame screen
-    Gloss.display dis backColor pic (Picture.flattenPicture pic)
+    Gloss.display dis backColor (Picture.flattenPicture pic)
 
 -- | A variant of 'Gloss.displayIO' using 'Frame'.
 displayRelativeIO
