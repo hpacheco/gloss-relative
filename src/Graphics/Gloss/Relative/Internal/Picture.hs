@@ -28,6 +28,64 @@ catPictures :: [Picture] -> Picture
 catPictures [x] = x
 catPictures xs = Pictures xs
 
+-- | Flattens a picture, by eliminating some nested transforms.
+-- NOTE: OpenGL backends have a nested transforms stack of only 32, so we need to make sure to flatten Pictures before rendering to avoid stack overflows.
+flattenPicture :: Picture -> Picture
+flattenPicture p = Pictures $ flatten identityMatrix p
+
+-- Representing Affine Transformation Matrices.
+-- | a c e |
+-- | b d f |
+-- | 0 0 1 |
+data Matrix = Matrix Float Float Float Float Float Float
+
+identityMatrix :: Matrix
+identityMatrix = Matrix 1 0 0 1 0 0
+
+isShearedMatrix :: Matrix -> Bool
+isShearedMatrix (Matrix a b c d _ _) = 
+    let dotProduct = a * c + b * d
+        epsilon = 0.0001
+    in abs dotProduct > epsilon
+
+multiplyMatrix :: Matrix -> Matrix -> Matrix
+multiplyMatrix (Matrix a1 b1 c1 d1 e1 f1) (Matrix a2 b2 c2 d2 e2 f2) =
+    Matrix (a1*a2 + c1*b2) (b1*a2 + d1*b2)
+           (a1*c2 + c1*d2) (b1*c2 + d1*d2)
+           (a1*e2 + c1*f2 + e1) (b1*e2 + d1*f2 + f1)
+
+flatten :: Matrix -> Picture -> [Picture]
+flatten m pic | isShearedMatrix m = [transformLeaf m pic]
+flatten m Blank = []
+flatten m (Pictures ps) = concatMap (flatten m) ps
+flatten m (Translate x y p) = flatten (m `multiplyMatrix` Matrix 1 0 0 1 x y) p
+flatten m (Scale sx sy p) = flatten (m `multiplyMatrix` Matrix sx 0 0 sy 0 0) p
+flatten m (Rotate deg p) =
+        let rad = -deg * pi / 180 -- Gloss is clockwise
+            s = sin rad
+            c = cos rad
+        in flatten (m `multiplyMatrix` Matrix c (-s) s c 0 0) p
+flatten m (Polygon points) = [Polygon (map (transformPoint m) points)]
+flatten m (Line points) = [Line (map (transformPoint m) points)]
+flatten m pic = [transformLeaf m pic]
+
+transformPoint :: Matrix -> Point -> Point
+transformPoint (Matrix a b c d e f) (x, y) = 
+    (a*x + c*y + e, b*x + d*y + f)
+
+transformLeaf :: Matrix -> Picture -> Picture
+transformLeaf (Matrix a b c d e f) leaf =
+    let
+        tx = e
+        ty = f
+        sx = sqrt (a*a + b*b)
+        -- Use the determinant to handle negative scaling/flipping
+        det = a*d - b*c
+        sy = (signum det) * sqrt (c*c + d*d)
+        angle = atan2 b a * 180 / pi
+    in
+        Translate tx ty $ Rotate (-angle) $ Scale sx sy leaf
+
 -- * Regions
 
 -- | A rectangular region within the screen.

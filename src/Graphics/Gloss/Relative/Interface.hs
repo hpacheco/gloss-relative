@@ -62,7 +62,7 @@ displayRelative
 displayRelative dis backColor frame = do
     screen <- getDisplayDimension dis
     let pic = renderStaticFrame frame screen
-    Gloss.display dis backColor pic
+    Gloss.display dis backColor pic (Picture.flattenPicture pic)
 
 -- | A variant of 'Gloss.displayIO' using 'Frame'.
 displayRelativeIO
@@ -77,7 +77,7 @@ displayRelativeIO dis backColor makeFrame eatController = do
     let makePicture = do
             frame <- makeFrame
             let pic = renderStaticFrame frame screen
-            return pic
+            return (Picture.flattenPicture pic)
     Gloss.displayIO dis backColor makePicture eatController
 
 -- | A variant of 'Gloss.play' using 'Frame'. The resulting picture is automatically redimensioned on resize events.
@@ -127,7 +127,7 @@ playRelativeIO display backColor simResolution worldStart worldToFrame worldHand
             writeIORef handler $! h
             writeIORef currentFrame $! i + 1
             Cache.evictOldCacheTable (i+1) simResolution cache
-            return pic
+            return (Picture.flattenPicture pic)
     let handleEvent ev (w,s) = do
             h <- readIORef handler
             fromGlossEvent ev h >>= \e -> case e of
